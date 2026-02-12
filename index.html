@@ -4,31 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dad Joke Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f0f0; }
-        h1 { color: #333; }
-        button { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 6px; }
-        button:hover { background: #45a049; }
-        #joke { margin-top: 30px; font-size: 22px; min-height: 60px; color: #444; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
     </style>
 </head>
-<body>
-    <h1>Dad Joke Button</h1>
-    <button onclick="getDadJoke()">Tell me a dad joke</button>
-    <div id="joke">Click the button!</div>
+<body class="bg-gradient-to-br from-yellow-100 to-orange-100 min-h-screen">
+
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <h1 class="text-4xl font-bold text-center text-gray-800 mt-8 mb-2">😂 Dad Joke Generator</h1>
+        <p class="text-center text-gray-600 mb-10">Click the button. Laugh. Repeat.</p>
+
+        <div class="grid md:grid-cols-3 gap-8">
+
+            <!-- Main Joke Area -->
+            <div class="md:col-span-2 bg-white rounded-3xl shadow-xl p-10">
+                <div id="joke" class="text-2xl leading-relaxed text-gray-800 min-h-[120px] flex items-center justify-center text-center">
+                    Click the button for a dad joke!
+                </div>
+
+                <div class="flex gap-4 mt-10">
+                    <button onclick="getDadJoke()" 
+                            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl text-lg transition">
+                        😂 New Joke
+                    </button>
+                    
+                    <button onclick="copyJoke()" 
+                            id="copyBtn"
+                            class="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-4 rounded-2xl text-lg transition">
+                        📋 Copy Joke
+                    </button>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="bg-white rounded-3xl shadow-xl p-6 h-fit">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-gray-800">History</h2>
+                    <button onclick="clearHistory()" 
+                            class="text-red-500 text-sm hover:underline">Clear</button>
+                </div>
+                <div id="history" class="space-y-3 max-h-96 overflow-y-auto text-sm">
+                    <!-- History items added by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
+        let history = JSON.parse(localStorage.getItem('dadJokes')) || [];
+
+        function renderHistory() {
+            const container = document.getElementById('history');
+            container.innerHTML = '';
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">No jokes yet...</p>';
+                return;
+            }
+
+            history.forEach((joke, index) => {
+                const div = document.createElement('div');
+                div.className = "p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-orange-50 transition";
+                div.textContent = joke.length > 80 ? joke.substring(0, 77) + "..." : joke;
+                div.onclick = () => {
+                    document.getElementById('joke').textContent = joke;
+                };
+                container.appendChild(div);
+            });
+        }
+
         async function getDadJoke() {
             try {
                 const res = await fetch('https://icanhazdadjoke.com', {
                     headers: { 'Accept': 'application/json' }
                 });
                 const data = await res.json();
-                document.getElementById('joke').textContent = data.joke;
+                
+                const jokeText = data.joke;
+                document.getElementById('joke').textContent = jokeText;
+
+                // Save to history
+                history.unshift(jokeText);
+                if (history.length > 20) history.pop(); // keep only 20
+                localStorage.setItem('dadJokes', JSON.stringify(history));
+                
+                renderHistory();
             } catch (e) {
-                document.getElementById('joke').textContent = "Oops... joke server is taking a nap!";
+                document.getElementById('joke').textContent = "Sorry, the joke machine is broken right now 😢";
             }
         }
+
+        function copyJoke() {
+            const jokeText = document.getElementById('joke').textContent;
+            if (jokeText === "Click the button for a dad joke!" || jokeText.includes("Sorry")) return;
+
+            navigator.clipboard.writeText(jokeText).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const original = btn.textContent;
+                btn.textContent = "✅ Copied!";
+                setTimeout(() => btn.textContent = original, 2000);
+            });
+        }
+
+        function clearHistory() {
+            if (confirm("Delete all joke history?")) {
+                history = [];
+                localStorage.setItem('dadJokes', JSON.stringify(history));
+                renderHistory();
+            }
+        }
+
+        // Load history when page opens
+        renderHistory();
     </script>
 </body>
 </html>
