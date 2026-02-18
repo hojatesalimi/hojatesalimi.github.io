@@ -3,121 +3,396 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dad Joke Generator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Snake Chase</title>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: 'Courier New', monospace;
+            color: #eee;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #00ff88; }
+        #stats {
+            display: none;
+            gap: 30px;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #scoreBoard span { color: #00ff88; font-weight: bold; }
+        #hearts { color: #ff4466; letter-spacing: 5px; }
+        canvas {
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            background: #0f0f1a;
+            display: block;
+        }
+        #menuScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 600px;
+            height: 400px;
+            background: #0f0f1a;
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        #menuScreen h2 {
+            font-size: 32px;
+            color: #00ff88;
+            margin-bottom: 30px;
+        }
+        .difficulty-btn {
+            padding: 15px 40px;
+            margin: 8px;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #00ff88;
+            background: transparent;
+            color: #00ff88;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 200px;
+        }
+        .difficulty-btn:hover {
+            background: #00ff88;
+            color: #0f0f1a;
+        }
+        .difficulty-btn.easy { border-color: #44ff88; color: #44ff88; }
+        .difficulty-btn.easy:hover { background: #44ff88; color: #0f0f1a; }
+        
+        .difficulty-btn.medium { border-color: #ffaa00; color: #ffaa00; }
+        .difficulty-btn.medium:hover { background: #ffaa00; color: #0f0f1a; }
+        
+        .difficulty-btn.hard { border-color: #ff4444; color: #ff4444; }
+        .difficulty-btn.hard:hover { background: #ff4444; color: #0f0f1a; }
+        
+        #instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-yellow-100 to-orange-100 min-h-screen">
-
-    <div class="max-w-4xl mx-auto p-6">
-        <!-- Header -->
-        <h1 class="text-4xl font-bold text-center text-gray-800 mt-8 mb-2">😂 Dad Joke Generator</h1>
-        <p class="text-center text-gray-600 mb-10">Click the button. Laugh. Repeat.</p>
-
-        <div class="grid md:grid-cols-3 gap-8">
-
-            <!-- Main Joke Area -->
-            <div class="md:col-span-2 bg-white rounded-3xl shadow-xl p-10">
-                <div id="joke" class="text-2xl leading-relaxed text-gray-800 min-h-[120px] flex items-center justify-center text-center">
-                    Click the button for a dad joke!
-                </div>
-
-                <div class="flex gap-4 mt-10">
-                    <button onclick="getDadJoke()" 
-                            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl text-lg transition">
-                        😂 New Joke
-                    </button>
-                    
-                    <button onclick="copyJoke()" 
-                            id="copyBtn"
-                            class="flex-1 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-4 rounded-2xl text-lg transition">
-                        📋 Copy Joke
-                    </button>
-                </div>
-            </div>
-
-            <!-- History -->
-            <div class="bg-white rounded-3xl shadow-xl p-6 h-fit">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="font-semibold text-gray-800">History</h2>
-                    <button onclick="clearHistory()" 
-                            class="text-red-500 text-sm hover:underline">Clear</button>
-                </div>
-                <div id="history" class="space-y-3 max-h-96 overflow-y-auto text-sm">
-                    <!-- History items added by JS -->
-                </div>
-            </div>
-        </div>
+<body>
+    <h1>🐍 Snake Chase</h1>
+    <div id="stats">
+        <div id="scoreBoard">Score: <span id="score">0</span></div>
+        <div id="hearts">❤️❤️❤️</div>
     </div>
+    
+    <div id="menuScreen">
+        <h2>Select Difficulty</h2>
+        <button class="difficulty-btn easy" onclick="startGame(200)">🐣 Easy</button>
+        <button class="difficulty-btn medium" onclick="startGame(100)">🔥 Medium</button>
+        <button class="difficulty-btn hard" onclick="startGame(66)">💀 Hard</button>
+    </div>
+    
+    <canvas id="game" width="600" height="400" style="display: none;"></canvas>
+    <div id="instructions" style="display: none;">Use Arrow Keys or WASD to move | Press Space to restart</div>
 
     <script>
-        let history = JSON.parse(localStorage.getItem('dadJokes')) || [];
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const heartsEl = document.getElementById('hearts');
+        const statsEl = document.getElementById('stats');
+        const menuScreen = document.getElementById('menuScreen');
+        const instructionsEl = document.getElementById('instructions');
 
-        function renderHistory() {
-            const container = document.getElementById('history');
-            container.innerHTML = '';
+        const GRID_SIZE = 20;
+        const TILE_COUNT_X = canvas.width / GRID_SIZE;
+        const TILE_COUNT_Y = canvas.height / GRID_SIZE;
+
+        let snake = [];
+        let snakeHistory = [];
+        let target = { x: 0, y: 0 };
+        let dx = 0;
+        let dy = 0;
+        let nextDx = 0;
+        let nextDy = 0;
+        let score = 0;
+        let hearts = 3;
+        let gameOver = false;
+        let isPaused = false;
+        let isReversing = false;
+        let isCountingDown = false;
+        let gameLoop = null;
+        let gameSpeed = 100;
+
+        function startGame(speed) {
+            gameSpeed = speed;
+            menuScreen.style.display = 'none';
+            canvas.style.display = 'block';
+            statsEl.style.display = 'flex';
+            instructionsEl.style.display = 'block';
+            initGame();
+        }
+
+        function initGame() {
+            snake = [
+                { x: 5, y: 5 },
+                { x: 4, y: 5 },
+                { x: 3, y: 5 }
+            ];
+            snakeHistory = snake.map(s => ({ ...s }));
             
-            if (history.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-center py-4">No jokes yet...</p>';
+            dx = 1;
+            dy = 0;
+            nextDx = 1;
+            nextDy = 0;
+            score = 0;
+            hearts = 3;
+            gameOver = false;
+            isPaused = false;
+            isReversing = false;
+            isCountingDown = false;
+            
+            scoreEl.textContent = score;
+            updateHeartsDisplay();
+            spawnTarget();
+            
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, gameSpeed);
+        }
+
+        function updateHeartsDisplay() {
+            let heartsStr = '';
+            for (let i = 0; i < hearts; i++) heartsStr += '❤️';
+            for (let i = hearts; i < 3; i++) heartsStr += '🖤';
+            heartsEl.textContent = heartsStr;
+        }
+
+        function spawnTarget() {
+            target = {
+                x: Math.floor(Math.random() * TILE_COUNT_X),
+                y: Math.floor(Math.random() * TILE_COUNT_Y)
+            };
+            
+            for (let segment of snake) {
+                if (segment.x === target.x && segment.y === target.y) {
+                    spawnTarget();
+                    break;
+                }
+            }
+        }
+
+        function handleFailure() {
+            if (hearts > 0) {
+                hearts--;
+                updateHeartsDisplay();
+                startReversingAnimation();
+            } else {
+                gameOver = true;
+                draw();
+            }
+        }
+
+        function startReversingAnimation() {
+            isReversing = true;
+            
+            let historyIndex = snakeHistory.length - 1;
+            let segmentsToRemove = snake.length - 3;
+            
+            let reverseStep = 0;
+            const reverseInterval = setInterval(() => {
+                if (segmentsToRemove > 0 && historyIndex >= 3) {
+                    snake.pop();
+                    segmentsToRemove--;
+                    historyIndex--;
+                    draw();
+                } else {
+                    clearInterval(reverseInterval);
+                    snakeHistory = snake.map(s => ({ ...s }));
+                    startCountdown();
+                }
+            }, 80);
+        }
+
+        function startCountdown() {
+            isCountingDown = true;
+            let count = 3;
+            
+            const countdownInterval = setInterval(() => {
+                drawCountdown(count);
+                count--;
+                
+                if (count < 0) {
+                    clearInterval(countdownInterval);
+                    isCountingDown = false;
+                    isReversing = false;
+                    dx = 0;
+                    dy = 0;
+                    nextDx = 0;
+                    nextDy = 0;
+                }
+            }, 800);
+        }
+
+        function drawCountdown(count) {
+            draw();
+            if (count > 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 80px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(count, canvas.width / 2, canvas.height / 2);
+            } else {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.font = 'bold 80px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('GO!', canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function update() {
+            if (gameOver || isReversing || isCountingDown) return;
+
+            dx = nextDx;
+            dy = nextDy;
+
+            if (dx === 0 && dy === 0) return;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            if (head.x < 0 || head.x >= TILE_COUNT_X || 
+                head.y < 0 || head.y >= TILE_COUNT_Y) {
+                handleFailure();
                 return;
             }
 
-            history.forEach((joke, index) => {
-                const div = document.createElement('div');
-                div.className = "p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-orange-50 transition";
-                div.textContent = joke.length > 80 ? joke.substring(0, 77) + "..." : joke;
-                div.onclick = () => {
-                    document.getElementById('joke').textContent = joke;
-                };
-                container.appendChild(div);
-            });
+            for (let segment of snake) {
+                if (head.x === segment.x && head.y === segment.y) {
+                    handleFailure();
+                    return;
+                }
+            }
+
+            snakeHistory.push({ ...head });
+            if (snakeHistory.length > 1000) {
+                snakeHistory = snakeHistory.slice(-500);
+            }
+
+            snake.unshift(head);
+
+            if (head.x === target.x && head.y === target.y) {
+                score++;
+                scoreEl.textContent = score;
+                spawnTarget();
+            } else {
+                snake.pop();
+            }
+
+            draw();
         }
 
-        async function getDadJoke() {
-            try {
-                const res = await fetch('https://icanhazdadjoke.com', {
-                    headers: { 'Accept': 'application/json' }
-                });
-                const data = await res.json();
-                
-                const jokeText = data.joke;
-                document.getElementById('joke').textContent = jokeText;
+        function draw() {
+            ctx.fillStyle = '#0f0f1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Save to history
-                history.unshift(jokeText);
-                if (history.length > 20) history.pop(); // keep only 20
-                localStorage.setItem('dadJokes', JSON.stringify(history));
+            if (gameOver) {
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '40px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 30);
+                ctx.font = '20px Courier New';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 60);
+                return;
+            }
+
+            const pulse = Math.sin(Date.now() / 150) * 2;
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(
+                target.x * GRID_SIZE + 2 - pulse/2, 
+                target.y * GRID_SIZE + 2 - pulse/2, 
+                GRID_SIZE - 4 + pulse, 
+                GRID_SIZE - 4 + pulse
+            );
+
+            for (let i = 0; i < snake.length; i++) {
+                const segment = snake[i];
+                const isHead = i === 0;
                 
-                renderHistory();
-            } catch (e) {
-                document.getElementById('joke').textContent = "Sorry, the joke machine is broken right now 😢";
+                ctx.fillStyle = isHead ? '#00ff88' : '#00cc6a';
+                ctx.fillRect(
+                    segment.x * GRID_SIZE + 1, 
+                    segment.y * GRID_SIZE + 1, 
+                    GRID_SIZE - 2, 
+                    GRID_SIZE - 2
+                );
+
+                if (isHead) {
+                    ctx.fillStyle = '#000';
+                    const eyeSize = 4;
+                    
+                    if (dx === 1 || (dx === 0 && dy === 0)) {
+                        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 11, eyeSize, eyeSize);
+                    } else if (dx === -1) {
+                        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 5, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 11, eyeSize, eyeSize);
+                    } else if (dy === -1) {
+                        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 4, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * GRID_SIZE + 11, segment.y * GRID_SIZE + 4, eyeSize, eyeSize);
+                    } else if (dy === 1) {
+                        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 12, eyeSize, eyeSize);
+                        ctx.fillRect(segment.x * GRID_SIZE + 11, segment.y * GRID_SIZE + 12, eyeSize, eyeSize);
+                    }
+                }
             }
         }
 
-        function copyJoke() {
-            const jokeText = document.getElementById('joke').textContent;
-            if (jokeText === "Click the button for a dad joke!" || jokeText.includes("Sorry")) return;
-
-            navigator.clipboard.writeText(jokeText).then(() => {
-                const btn = document.getElementById('copyBtn');
-                const original = btn.textContent;
-                btn.textContent = "✅ Copied!";
-                setTimeout(() => btn.textContent = original, 2000);
-            });
-        }
-
-        function clearHistory() {
-            if (confirm("Delete all joke history?")) {
-                history = [];
-                localStorage.setItem('dadJokes', JSON.stringify(history));
-                renderHistory();
+        document.addEventListener('keydown', (e) => {
+            if (gameOver && e.code === 'Space') {
+                initGame();
+                return;
             }
-        }
 
-        // Load history when page opens
-        renderHistory();
+            if (isReversing || isCountingDown) return;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    if (dy !== 1) { nextDx = 0; nextDy = -1; }
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    if (dy !== -1) { nextDx = 0; nextDy = 1; }
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    if (dx !== 1) { nextDx = -1; nextDy = 0; }
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    if (dx !== -1) { nextDx = 1; nextDy = 0; }
+                    break;
+            }
+            
+            if (dx === 0 && dy === 0) {
+                dx = nextDx;
+                dy = nextDy;
+            }
+        });
     </script>
 </body>
 </html>
