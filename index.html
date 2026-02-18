@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Chase</title>
+    <title>Snake Chase by Hosal</title>
     <style>
         body {
             margin: 0;
@@ -30,6 +30,7 @@
             box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
             background: #0f0f1a;
             display: block;
+            touch-action: none;
         }
         #menuScreen {
             display: flex;
@@ -65,17 +66,43 @@
         }
         .difficulty-btn.easy { border-color: #44ff88; color: #44ff88; }
         .difficulty-btn.easy:hover { background: #44ff88; color: #0f0f1a; }
-        
         .difficulty-btn.medium { border-color: #ffaa00; color: #ffaa00; }
         .difficulty-btn.medium:hover { background: #ffaa00; color: #0f0f1a; }
-        
         .difficulty-btn.hard { border-color: #ff4444; color: #ff4444; }
         .difficulty-btn.hard:hover { background: #ff4444; color: #0f0f1a; }
-        
         #instructions {
             margin-top: 15px;
             font-size: 14px;
             color: #888;
+        }
+        #mobileControls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            user-select: none;
+        }
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            font-size: 40px;
+            background: rgba(0, 255, 136, 0.15);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            border-radius: 18px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            touch-action: manipulation;
+        }
+        .control-btn:active {
+            background: rgba(0, 255, 136, 0.4);
+        }
+        @media (max-width: 768px) or (pointer: coarse) {
+            #mobileControls { display: block !important; }
+            #menuScreen { width: 90%; height: auto; padding: 20px 0; }
+            canvas { width: 100%; height: auto; max-width: 600px; }
         }
     </style>
 </head>
@@ -95,6 +122,17 @@
     
     <canvas id="game" width="600" height="400" style="display: none;"></canvas>
     <div id="instructions" style="display: none;">Use Arrow Keys or WASD to move | Press Space to restart</div>
+
+    <div id="mobileControls">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button id="up" class="control-btn">↑</button>
+            <div style="display: flex; gap: 60px;">
+                <button id="left" class="control-btn">←</button>
+                <button id="right" class="control-btn">→</button>
+            </div>
+            <button id="down" class="control-btn">↓</button>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('game');
@@ -118,6 +156,7 @@
         let nextDy = 0;
         let score = 0;
         let hearts = 3;
+        let savedLength = 3;
         let gameOver = false;
         let isPaused = false;
         let isReversing = false;
@@ -127,6 +166,7 @@
 
         function startGame(speed) {
             gameSpeed = speed;
+            savedLength = 3;
             menuScreen.style.display = 'none';
             canvas.style.display = 'block';
             statsEl.style.display = 'flex';
@@ -135,11 +175,10 @@
         }
 
         function initGame() {
-            snake = [
-                { x: 5, y: 5 },
-                { x: 4, y: 5 },
-                { x: 3, y: 5 }
-            ];
+            snake = [];
+            for (let i = 0; i < savedLength; i++) {
+                snake.push({ x: 5 - i, y: 5 });
+            }
             snakeHistory = snake.map(s => ({ ...s }));
             
             dx = 1;
@@ -199,7 +238,6 @@
             let historyIndex = snakeHistory.length - 1;
             let segmentsToRemove = snake.length - 3;
             
-            let reverseStep = 0;
             const reverseInterval = setInterval(() => {
                 if (segmentsToRemove > 0 && historyIndex >= 3) {
                     snake.pop();
@@ -208,6 +246,7 @@
                     draw();
                 } else {
                     clearInterval(reverseInterval);
+                    savedLength = snake.length;
                     snakeHistory = snake.map(s => ({ ...s }));
                     startCountdown();
                 }
@@ -281,9 +320,7 @@
             }
 
             snakeHistory.push({ ...head });
-            if (snakeHistory.length > 1000) {
-                snakeHistory = snakeHistory.slice(-500);
-            }
+            if (snakeHistory.length > 1000) snakeHistory = snakeHistory.slice(-500);
 
             snake.unshift(head);
 
@@ -366,24 +403,16 @@
             if (isReversing || isCountingDown) return;
 
             switch (e.key) {
-                case 'ArrowUp':
-                case 'w':
-                case 'W':
+                case 'ArrowUp': case 'w': case 'W':
                     if (dy !== 1) { nextDx = 0; nextDy = -1; }
                     break;
-                case 'ArrowDown':
-                case 's':
-                case 'S':
+                case 'ArrowDown': case 's': case 'S':
                     if (dy !== -1) { nextDx = 0; nextDy = 1; }
                     break;
-                case 'ArrowLeft':
-                case 'a':
-                case 'A':
+                case 'ArrowLeft': case 'a': case 'A':
                     if (dx !== 1) { nextDx = -1; nextDy = 0; }
                     break;
-                case 'ArrowRight':
-                case 'd':
-                case 'D':
+                case 'ArrowRight': case 'd': case 'D':
                     if (dx !== -1) { nextDx = 1; nextDy = 0; }
                     break;
             }
@@ -393,6 +422,34 @@
                 dy = nextDy;
             }
         });
+
+        // Mobile controls
+        const upBtn    = document.getElementById('up');
+        const downBtn  = document.getElementById('down');
+        const leftBtn  = document.getElementById('left');
+        const rightBtn = document.getElementById('right');
+
+        function setDirection(dirX, dirY) {
+            return function(e) {
+                e.preventDefault();
+                if (gameOver || isReversing || isCountingDown) return;
+                if (dirY !== -dy || dirX !== -dx) {
+                    nextDx = dirX;
+                    nextDy = dirY;
+                }
+            };
+        }
+
+        upBtn.addEventListener('touchstart', setDirection(0, -1));
+        downBtn.addEventListener('touchstart', setDirection(0, 1));
+        leftBtn.addEventListener('touchstart', setDirection(-1, 0));
+        rightBtn.addEventListener('touchstart', setDirection(1, 0));
+
+        // Also support clicks (for testing)
+        upBtn.addEventListener('click', setDirection(0, -1));
+        downBtn.addEventListener('click', setDirection(0, 1));
+        leftBtn.addEventListener('click', setDirection(-1, 0));
+        rightBtn.addEventListener('click', setDirection(1, 0));
     </script>
 </body>
 </html>
