@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Chase by Hosal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Chase</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -15,13 +16,15 @@
             background: #1a1a2e;
             font-family: 'Courier New', monospace;
             color: #eee;
+            overflow: hidden;
+            touch-action: none;
         }
-        h1 { margin: 0 0 10px 0; font-size: 24px; color: #00ff88; }
+        h1 { margin: 10px 0; font-size: 24px; color: #00ff88; }
         #stats {
             display: none;
             gap: 30px;
             font-size: 18px;
-            margin-bottom: 10px;
+            margin: 10px 0;
         }
         #scoreBoard span { color: #00ff88; font-weight: bold; }
         #hearts { color: #ff4466; letter-spacing: 5px; }
@@ -30,6 +33,9 @@
             box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
             background: #0f0f1a;
             display: block;
+            width: 100%;
+            max-width: 600px;
+            height: auto;
             touch-action: none;
         }
         #menuScreen {
@@ -37,20 +43,18 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 600px;
-            height: 400px;
+            width: 90%;
+            max-width: 600px;
+            height: auto;
+            padding: 30px 0;
             background: #0f0f1a;
             border: 3px solid #00ff88;
             box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
         }
-        #menuScreen h2 {
-            font-size: 32px;
-            color: #00ff88;
-            margin-bottom: 30px;
-        }
+        #menuScreen h2 { font-size: 32px; color: #00ff88; margin-bottom: 30px; }
         .difficulty-btn {
             padding: 15px 40px;
-            margin: 8px;
+            margin: 10px;
             font-size: 20px;
             font-family: 'Courier New', monospace;
             border: 2px solid #00ff88;
@@ -58,12 +62,9 @@
             color: #00ff88;
             cursor: pointer;
             transition: all 0.2s;
-            width: 200px;
+            width: 220px;
         }
-        .difficulty-btn:hover {
-            background: #00ff88;
-            color: #0f0f1a;
-        }
+        .difficulty-btn:hover { background: #00ff88; color: #0f0f1a; }
         .difficulty-btn.easy { border-color: #44ff88; color: #44ff88; }
         .difficulty-btn.easy:hover { background: #44ff88; color: #0f0f1a; }
         .difficulty-btn.medium { border-color: #ffaa00; color: #ffaa00; }
@@ -74,35 +75,50 @@
             margin-top: 15px;
             font-size: 14px;
             color: #888;
+            text-align: center;
+            padding: 0 20px;
         }
         #mobileControls {
-            display: none;
             position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 100;
+            z-index: 10;
+            pointer-events: auto;
             user-select: none;
+            display: none;
+        }
+        .control-dpad {
+            position: relative;
+            width: 180px;
+            height: 180px;
         }
         .control-btn {
+            position: absolute;
             width: 70px;
             height: 70px;
             font-size: 40px;
-            background: rgba(0, 255, 136, 0.15);
+            background: rgba(0, 255, 136, 0.12);
             border: 2px solid #00ff88;
             color: #00ff88;
-            border-radius: 18px;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             touch-action: manipulation;
         }
-        .control-btn:active {
-            background: rgba(0, 255, 136, 0.4);
-        }
-        @media (max-width: 768px) or (pointer: coarse) {
-            #mobileControls { display: block !important; }
-            #menuScreen { width: 90%; height: auto; padding: 20px 0; }
-            canvas { width: 100%; height: auto; max-width: 600px; }
+        .control-btn:active { background: rgba(0, 255, 136, 0.35); }
+        #up    { top: 0;    left: 55px; }
+        #down  { bottom: 0; left: 55px; }
+        #left  { left: 0;   top: 55px; }
+        #right { right: 0;  top: 55px; }
+        @media (max-width: 768px), (pointer: coarse) {
+            #mobileControls { display: block; }
+            h1 { font-size: 22px; margin: 8px 0; }
+            #stats { font-size: 16px; gap: 20px; }
+            canvas { border-width: 2px; }
         }
     </style>
 </head>
@@ -121,16 +137,14 @@
     </div>
     
     <canvas id="game" width="600" height="400" style="display: none;"></canvas>
-    <div id="instructions" style="display: none;">Use Arrow Keys or WASD to move | Press Space to restart</div>
+    <div id="instructions" style="display: none;">Arrow Keys / WASD to move | Space to restart</div>
 
     <div id="mobileControls">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button id="up" class="control-btn">↑</button>
-            <div style="display: flex; gap: 60px;">
-                <button id="left" class="control-btn">←</button>
-                <button id="right" class="control-btn">→</button>
-            </div>
-            <button id="down" class="control-btn">↓</button>
+        <div class="control-dpad">
+            <button id="up"    class="control-btn">↑</button>
+            <button id="down"  class="control-btn">↓</button>
+            <button id="left"  class="control-btn">←</button>
+            <button id="right" class="control-btn">→</button>
         </div>
     </div>
 
@@ -150,15 +164,12 @@
         let snake = [];
         let snakeHistory = [];
         let target = { x: 0, y: 0 };
-        let dx = 0;
-        let dy = 0;
-        let nextDx = 0;
-        let nextDy = 0;
+        let dx = 0, dy = 0;
+        let nextDx = 0, nextDy = 0;
         let score = 0;
         let hearts = 3;
         let savedLength = 3;
         let gameOver = false;
-        let isPaused = false;
         let isReversing = false;
         let isCountingDown = false;
         let gameLoop = null;
@@ -180,31 +191,25 @@
                 snake.push({ x: 5 - i, y: 5 });
             }
             snakeHistory = snake.map(s => ({ ...s }));
-            
-            dx = 1;
-            dy = 0;
-            nextDx = 1;
-            nextDy = 0;
+            dx = 1; dy = 0;
+            nextDx = 1; nextDy = 0;
             score = 0;
             hearts = 3;
             gameOver = false;
-            isPaused = false;
             isReversing = false;
             isCountingDown = false;
-            
             scoreEl.textContent = score;
             updateHeartsDisplay();
             spawnTarget();
-            
             if (gameLoop) clearInterval(gameLoop);
             gameLoop = setInterval(update, gameSpeed);
         }
 
         function updateHeartsDisplay() {
-            let heartsStr = '';
-            for (let i = 0; i < hearts; i++) heartsStr += '❤️';
-            for (let i = hearts; i < 3; i++) heartsStr += '🖤';
-            heartsEl.textContent = heartsStr;
+            let str = '';
+            for (let i = 0; i < hearts; i++) str += '❤️';
+            for (let i = hearts; i < 3; i++) str += '🖤';
+            heartsEl.textContent = str;
         }
 
         function spawnTarget() {
@@ -212,13 +217,7 @@
                 x: Math.floor(Math.random() * TILE_COUNT_X),
                 y: Math.floor(Math.random() * TILE_COUNT_Y)
             };
-            
-            for (let segment of snake) {
-                if (segment.x === target.x && segment.y === target.y) {
-                    spawnTarget();
-                    break;
-                }
-            }
+            if (snake.some(s => s.x === target.x && s.y === target.y)) spawnTarget();
         }
 
         function handleFailure() {
@@ -234,18 +233,16 @@
 
         function startReversingAnimation() {
             isReversing = true;
-            
-            let historyIndex = snakeHistory.length - 1;
-            let segmentsToRemove = snake.length - 3;
-            
-            const reverseInterval = setInterval(() => {
-                if (segmentsToRemove > 0 && historyIndex >= 3) {
+            let toRemove = 0;
+            let idx = snakeHistory.length - 1;
+            const rev = setInterval(() => {
+                if (toRemove > 0 && idx >= 3) {
                     snake.pop();
-                    segmentsToRemove--;
-                    historyIndex--;
+                    toRemove--;
+                    idx--;
                     draw();
                 } else {
-                    clearInterval(reverseInterval);
+                    clearInterval(rev);
                     savedLength = snake.length;
                     snakeHistory = snake.map(s => ({ ...s }));
                     startCountdown();
@@ -256,72 +253,46 @@
         function startCountdown() {
             isCountingDown = true;
             let count = 3;
-            
-            const countdownInterval = setInterval(() => {
+            const cd = setInterval(() => {
                 drawCountdown(count);
                 count--;
-                
                 if (count < 0) {
-                    clearInterval(countdownInterval);
+                    clearInterval(cd);
                     isCountingDown = false;
                     isReversing = false;
-                    dx = 0;
-                    dy = 0;
-                    nextDx = 0;
-                    nextDy = 0;
+                    dx = nextDx = 0;
+                    dy = nextDy = 0;
                 }
             }, 800);
         }
 
-        function drawCountdown(count) {
+        function drawCountdown(n) {
             draw();
-            if (count > 0) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = '#ffff00';
-                ctx.font = 'bold 80px Courier New';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(count, canvas.width / 2, canvas.height / 2);
-            } else {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = '#00ff88';
-                ctx.font = 'bold 80px Courier New';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('GO!', canvas.width / 2, canvas.height / 2);
-            }
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.font = 'bold 100px Courier New';
+            ctx.fillStyle = n > 0 ? '#ffff00' : '#00ff88';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(n > 0 ? n : 'GO!', canvas.width/2, canvas.height/2);
         }
 
         function update() {
             if (gameOver || isReversing || isCountingDown) return;
-
             dx = nextDx;
             dy = nextDy;
-
             if (dx === 0 && dy === 0) return;
 
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-            if (head.x < 0 || head.x >= TILE_COUNT_X || 
-                head.y < 0 || head.y >= TILE_COUNT_Y) {
+            if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y ||
+                snake.some(s => s.x === head.x && s.y === head.y)) {
                 handleFailure();
                 return;
             }
 
-            for (let segment of snake) {
-                if (head.x === segment.x && head.y === segment.y) {
-                    handleFailure();
-                    return;
-                }
-            }
-
             snakeHistory.push({ ...head });
             if (snakeHistory.length > 1000) snakeHistory = snakeHistory.slice(-500);
-
             snake.unshift(head);
 
             if (head.x === target.x && head.y === target.y) {
@@ -331,125 +302,91 @@
             } else {
                 snake.pop();
             }
-
             draw();
         }
 
         function draw() {
             ctx.fillStyle = '#0f0f1a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0,0,canvas.width,canvas.height);
 
             if (gameOver) {
                 ctx.fillStyle = '#ff4444';
-                ctx.font = '40px Courier New';
+                ctx.font = '50px Courier New';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 30);
-                ctx.font = '20px Courier New';
+                ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 40);
+                ctx.font = '24px Courier New';
                 ctx.fillStyle = '#fff';
-                ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
-                ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillText(`Score: ${score}`, canvas.width/2, canvas.height/2 + 10);
+                ctx.fillText('Space to restart', canvas.width/2, canvas.height/2 + 50);
                 return;
             }
 
-            const pulse = Math.sin(Date.now() / 150) * 2;
+            const p = Math.sin(Date.now()/150)*2;
             ctx.fillStyle = '#ff4444';
-            ctx.fillRect(
-                target.x * GRID_SIZE + 2 - pulse/2, 
-                target.y * GRID_SIZE + 2 - pulse/2, 
-                GRID_SIZE - 4 + pulse, 
-                GRID_SIZE - 4 + pulse
-            );
+            ctx.fillRect(target.x*GRID_SIZE+2-p/2, target.y*GRID_SIZE+2-p/2, GRID_SIZE-4+p, GRID_SIZE-4+p);
 
-            for (let i = 0; i < snake.length; i++) {
-                const segment = snake[i];
-                const isHead = i === 0;
-                
-                ctx.fillStyle = isHead ? '#00ff88' : '#00cc6a';
-                ctx.fillRect(
-                    segment.x * GRID_SIZE + 1, 
-                    segment.y * GRID_SIZE + 1, 
-                    GRID_SIZE - 2, 
-                    GRID_SIZE - 2
-                );
-
-                if (isHead) {
+            snake.forEach((s, i) => {
+                ctx.fillStyle = i===0 ? '#00ff88' : '#00cc6a';
+                ctx.fillRect(s.x*GRID_SIZE+1, s.y*GRID_SIZE+1, GRID_SIZE-2, GRID_SIZE-2);
+                if (i===0) {
                     ctx.fillStyle = '#000';
-                    const eyeSize = 4;
-                    
-                    if (dx === 1 || (dx === 0 && dy === 0)) {
-                        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 5, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 11, eyeSize, eyeSize);
-                    } else if (dx === -1) {
-                        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 5, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 11, eyeSize, eyeSize);
-                    } else if (dy === -1) {
-                        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 4, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * GRID_SIZE + 11, segment.y * GRID_SIZE + 4, eyeSize, eyeSize);
-                    } else if (dy === 1) {
-                        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 12, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * GRID_SIZE + 11, segment.y * GRID_SIZE + 12, eyeSize, eyeSize);
+                    const es=4;
+                    if (dx===1 || (dx===0&&dy===0)) {
+                        ctx.fillRect(s.x*GRID_SIZE+12, s.y*GRID_SIZE+5, es, es);
+                        ctx.fillRect(s.x*GRID_SIZE+12, s.y*GRID_SIZE+11, es, es);
+                    } else if (dx===-1) {
+                        ctx.fillRect(s.x*GRID_SIZE+4, s.y*GRID_SIZE+5, es, es);
+                        ctx.fillRect(s.x*GRID_SIZE+4, s.y*GRID_SIZE+11, es, es);
+                    } else if (dy===-1) {
+                        ctx.fillRect(s.x*GRID_SIZE+5, s.y*GRID_SIZE+4, es, es);
+                        ctx.fillRect(s.x*GRID_SIZE+11, s.y*GRID_SIZE+4, es, es);
+                    } else if (dy===1) {
+                        ctx.fillRect(s.x*GRID_SIZE+5, s.y*GRID_SIZE+12, es, es);
+                        ctx.fillRect(s.x*GRID_SIZE+11, s.y*GRID_SIZE+12, es, es);
                     }
                 }
-            }
+            });
         }
 
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', e => {
             if (gameOver && e.code === 'Space') {
+                savedLength = 3;
                 initGame();
                 return;
             }
-
             if (isReversing || isCountingDown) return;
 
-            switch (e.key) {
-                case 'ArrowUp': case 'w': case 'W':
-                    if (dy !== 1) { nextDx = 0; nextDy = -1; }
-                    break;
-                case 'ArrowDown': case 's': case 'S':
-                    if (dy !== -1) { nextDx = 0; nextDy = 1; }
-                    break;
-                case 'ArrowLeft': case 'a': case 'A':
-                    if (dx !== 1) { nextDx = -1; nextDy = 0; }
-                    break;
-                case 'ArrowRight': case 'd': case 'D':
-                    if (dx !== -1) { nextDx = 1; nextDy = 0; }
-                    break;
+            switch (e.key.toLowerCase()) {
+                case 'arrowup': case 'w':    if (dy !== 1)  { nextDx=0; nextDy=-1; } break;
+                case 'arrowdown': case 's':  if (dy !== -1) { nextDx=0; nextDy=1;  } break;
+                case 'arrowleft': case 'a':  if (dx !== 1)  { nextDx=-1; nextDy=0; } break;
+                case 'arrowright': case 'd': if (dx !== -1) { nextDx=1; nextDy=0;  } break;
             }
-            
-            if (dx === 0 && dy === 0) {
-                dx = nextDx;
-                dy = nextDy;
-            }
+            if (dx===0 && dy===0) { dx=nextDx; dy=nextDy; }
         });
 
         // Mobile controls
-        const upBtn    = document.getElementById('up');
-        const downBtn  = document.getElementById('down');
-        const leftBtn  = document.getElementById('left');
-        const rightBtn = document.getElementById('right');
+        const dirs = {
+            up:    {dx:0, dy:-1},
+            down:  {dx:0, dy:1},
+            left:  {dx:-1,dy:0},
+            right: {dx:1, dy:0}
+        };
 
-        function setDirection(dirX, dirY) {
-            return function(e) {
+        Object.keys(dirs).forEach(key => {
+            const btn = document.getElementById(key);
+            const dir = dirs[key];
+            const handler = e => {
                 e.preventDefault();
                 if (gameOver || isReversing || isCountingDown) return;
-                if (dirY !== -dy || dirX !== -dx) {
-                    nextDx = dirX;
-                    nextDy = dirY;
+                if (dir.dy !== -dy || dir.dx !== -dx) {
+                    nextDx = dir.dx;
+                    nextDy = dir.dy;
                 }
             };
-        }
-
-        upBtn.addEventListener('touchstart', setDirection(0, -1));
-        downBtn.addEventListener('touchstart', setDirection(0, 1));
-        leftBtn.addEventListener('touchstart', setDirection(-1, 0));
-        rightBtn.addEventListener('touchstart', setDirection(1, 0));
-
-        // Also support clicks (for testing)
-        upBtn.addEventListener('click', setDirection(0, -1));
-        downBtn.addEventListener('click', setDirection(0, 1));
-        leftBtn.addEventListener('click', setDirection(-1, 0));
-        rightBtn.addEventListener('click', setDirection(1, 0));
+            btn.addEventListener('touchstart', handler);
+            btn.addEventListener('mousedown', handler); // for testing
+        });
     </script>
 </body>
 </html>
